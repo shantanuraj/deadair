@@ -39,7 +39,7 @@ impl Config {
             .and_then(|p| p.parse().ok())
             .unwrap_or(8080u16);
         let host =
-            env::var("DEADAIR_HOST").unwrap_or_else(|_| format!("http://localhost:{}", port));
+            env::var("DEADAIR_HOST").unwrap_or_else(|_| format!("http://127.0.0.1:{}", port));
         Ok(Self {
             spotify_client_id: env::var("SPOTIFY_CLIENT_ID")
                 .map_err(|_| anyhow::anyhow!("SPOTIFY_CLIENT_ID not set"))?,
