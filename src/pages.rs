@@ -38,13 +38,16 @@ pub async fn dashboard(
     session: Session,
     State(state): State<Arc<AppState>>,
 ) -> AppResult<Response> {
-    let (display_name, stats, groups) = {
+    let now = chrono::Utc::now().timestamp();
+    let (display_name, stats, groups, classifications) = {
         let conn = state.db.lock().unwrap();
         let name = db::get_display_name(&conn, &session.user_id)?
             .unwrap_or_else(|| session.user_id.clone());
         let stats = db::get_stats(&conn, &session.user_id)?;
         let groups = db::listen_groups(&conn, &session.user_id)?;
-        (name, stats, groups)
+        let classifications =
+            db::classifications_in_range(&conn, &session.user_id, now - 86400, now)?;
+        (name, stats, groups, classifications)
     };
 
     let skip_pct = format!("{:.1}", stats.skip_rate * 100.0);
@@ -84,14 +87,31 @@ pub async fn dashboard(
         })
         .collect();
 
-    let listen_table = if listen_rows.is_empty() {
-        String::new()
-    } else {
-        format!(
-            "<h2>recent</h2><table><tr><th>track</th><th>artist</th><th>listened</th><th>duration</th><th>polls</th></tr>{}</table>",
-            listen_rows
-        )
-    };
+    let playback_table = format!(
+        "<table><tr><th>track</th><th>artist</th><th>listened</th><th>duration</th><th>polls</th></tr>{}</table>",
+        listen_rows
+    );
+
+    let classification_rows: String = classifications
+        .iter()
+        .rev()
+        .map(|c| {
+            let skip_marker = match c.skipped {
+                Some(true) => "skip",
+                Some(false) => "",
+                None => "?",
+            };
+            format!(
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                c.track_name, c.artist_name, fmt_ms(c.listened_ms), fmt_ms(c.duration_ms), skip_marker
+            )
+        })
+        .collect();
+
+    let classification_table = format!(
+        "<table><tr><th>track</th><th>artist</th><th>listened</th><th>duration</th><th></th></tr>{}</table>",
+        classification_rows
+    );
 
     Ok((
         [(CONTENT_TYPE, "text/html")],
@@ -101,16 +121,24 @@ pub async fn dashboard(
 <title>deadair</title>
 <style>{STYLE}
 table{{border-collapse:collapse;width:100%}}th,td{{text-align:left;padding:0.3em 1em 0.3em 0}}
-th{{border-bottom:1px solid #000}}h2{{font-weight:400;font-size:1em;margin-top:2em}}</style></head>
+th{{border-bottom:1px solid #000}}h2{{font-weight:400;font-size:1em;margin-top:2em}}
+.tabs{{margin-top:2em}}.tabs input{{display:none}}.tabs label{{cursor:pointer;padding:0.3em 0;margin-right:1.5em;border-bottom:1px solid transparent}}
+.tabs input:checked+label{{border-bottom:1px solid #000}}.tab-content{{display:none;margin-top:1em}}
+#tab-playback:checked~.tc-playback,#tab-classifications:checked~.tc-classifications{{display:block}}</style></head>
 <body>
 <h1>deadair</h1>
 <p>{display_name}</p>
 <hr>
 <p>{total} listens &middot; {skipped} skipped ({skip_pct}%) &middot; {completed} played</p>
 {top_skipped_table}
-{listen_table}
+<div class="tabs">
+<input type="radio" name="tab" id="tab-playback" checked><label for="tab-playback">playback</label>
+<input type="radio" name="tab" id="tab-classifications"><label for="tab-classifications">classifications</label>
+<div class="tab-content tc-playback">{playback_table}</div>
+<div class="tab-content tc-classifications">{classification_table}</div>
+</div>
 <hr>
-<p><a href="/api/events?format=csv">events csv</a> &middot; <a href="/api/events">events json</a> &middot; <a href="/api/playback?format=csv">playback csv</a> &middot; <a href="/api/playback">playback json</a> &middot; <a href="/api/stats">stats</a></p>
+<p><a href="/api/events?format=csv">events csv</a> &middot; <a href="/api/playback?format=csv&amp;since=2020-01-01&amp;limit=0">playback csv (all)</a> &middot; <a href="/api/stats">stats</a></p>
 <hr>
 <p><a href="/auth/logout">logout</a></p>
 </body></html>"#,
