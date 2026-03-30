@@ -1,7 +1,7 @@
 use anyhow::Result;
 use rusqlite::Connection;
 
-use crate::models::{ArtistSkipRate, Classification, PlaybackEvent, Stats, TrackCount};
+use crate::models::{ArtistSkipRate, Classification, ListenGroup, PlaybackEvent, Stats, TrackCount};
 
 pub fn create_tables(conn: &Connection) -> Result<()> {
     conn.execute_batch(
@@ -250,6 +250,37 @@ pub fn classifications_in_range(
             listened_ms: row.get(9)?,
             skipped: row.get(10)?,
             context_uri: row.get(11)?,
+        })
+    })?;
+    Ok(rows.collect::<Result<Vec<_>, _>>()?)
+}
+
+pub fn listen_groups(conn: &Connection, user_id: &str) -> Result<Vec<ListenGroup>> {
+    let since = chrono::Utc::now().timestamp() - 86400;
+    let mut stmt = conn.prepare(
+        "SELECT
+            MAX(track_name), MAX(artist_name),
+            MAX(progress_ms), MAX(duration_ms), COUNT(*)
+        FROM (
+            SELECT *, SUM(new_group) OVER (ORDER BY polled_at DESC) AS grp
+            FROM (
+                SELECT *,
+                    CASE WHEN track_id != LAG(track_id) OVER (ORDER BY polled_at DESC)
+                         OR LAG(track_id) OVER (ORDER BY polled_at DESC) IS NULL
+                         THEN 1 ELSE 0 END AS new_group
+                FROM playback_events WHERE user_id = ?1 AND polled_at >= ?2
+            )
+        )
+        GROUP BY grp
+        ORDER BY MIN(polled_at) DESC",
+    )?;
+    let rows = stmt.query_map((user_id, since), |row| {
+        Ok(ListenGroup {
+            track_name: row.get(0)?,
+            artist_name: row.get(1)?,
+            listened_ms: row.get(2)?,
+            duration_ms: row.get(3)?,
+            polls: row.get(4)?,
         })
     })?;
     Ok(rows.collect::<Result<Vec<_>, _>>()?)

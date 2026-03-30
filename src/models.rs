@@ -145,6 +145,15 @@ pub struct TrackCount {
 }
 
 #[derive(Debug, Serialize)]
+pub struct ListenGroup {
+    pub track_name: String,
+    pub artist_name: String,
+    pub listened_ms: i64,
+    pub duration_ms: i64,
+    pub polls: i64,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ArtistSkipRate {
     pub artist_name: String,
     pub total: i64,

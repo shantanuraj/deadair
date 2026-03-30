@@ -38,12 +38,13 @@ pub async fn dashboard(
     session: Session,
     State(state): State<Arc<AppState>>,
 ) -> AppResult<Response> {
-    let (display_name, stats) = {
+    let (display_name, stats, groups) = {
         let conn = state.db.lock().unwrap();
         let name = db::get_display_name(&conn, &session.user_id)?
             .unwrap_or_else(|| session.user_id.clone());
         let stats = db::get_stats(&conn, &session.user_id)?;
-        (name, stats)
+        let groups = db::listen_groups(&conn, &session.user_id)?;
+        (name, stats, groups)
     };
 
     let skip_pct = format!("{:.1}", stats.skip_rate * 100.0);
@@ -68,6 +69,30 @@ pub async fn dashboard(
         )
     };
 
+    let fmt_ms = |ms: i64| -> String {
+        let s = ms / 1000;
+        format!("{}m {}s", s / 60, s % 60)
+    };
+
+    let listen_rows: String = groups
+        .iter()
+        .map(|g| {
+            format!(
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                g.track_name, g.artist_name, fmt_ms(g.listened_ms), fmt_ms(g.duration_ms), g.polls
+            )
+        })
+        .collect();
+
+    let listen_table = if listen_rows.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<h2>recent</h2><table><tr><th>track</th><th>artist</th><th>listened</th><th>duration</th><th>polls</th></tr>{}</table>",
+            listen_rows
+        )
+    };
+
     Ok((
         [(CONTENT_TYPE, "text/html")],
         format!(
@@ -83,6 +108,7 @@ th{{border-bottom:1px solid #000}}h2{{font-weight:400;font-size:1em;margin-top:2
 <hr>
 <p>{total} listens &middot; {skipped} skipped ({skip_pct}%) &middot; {completed} played</p>
 {top_skipped_table}
+{listen_table}
 <hr>
 <p><a href="/api/events?format=csv">events csv</a> &middot; <a href="/api/events">events json</a> &middot; <a href="/api/playback?format=csv">playback csv</a> &middot; <a href="/api/playback">playback json</a> &middot; <a href="/api/stats">stats</a></p>
 <hr>

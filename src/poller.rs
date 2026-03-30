@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 use crate::models::{PlaybackState, TokenData};
 use crate::{db, spotify, AppState};
 
-const SKIP_THRESHOLD: f64 = 0.8;
+const SKIP_THRESHOLD_MS: i64 = 10_000;
 
 #[derive(Default)]
 pub struct TrackingState {
@@ -106,8 +106,7 @@ fn close_current(
     now: i64,
 ) -> anyhow::Result<()> {
     if let Some(class_id) = tracking.open_classification_id.take() {
-        let skipped =
-            tracking.max_progress_ms < (tracking.duration_ms as f64 * SKIP_THRESHOLD) as i64;
+        let skipped = tracking.max_progress_ms < tracking.duration_ms - SKIP_THRESHOLD_MS;
         let conn = db_mutex.lock().unwrap();
         db::close_classification(&conn, class_id, now, tracking.max_progress_ms, skipped)?;
     }

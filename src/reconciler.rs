@@ -60,7 +60,7 @@ fn backfill(
             continue;
         }
 
-        let skipped = listened_ms < (item.track.duration_ms as f64 * 0.8) as i64;
+        let skipped = listened_ms < item.track.duration_ms - 10_000;
         let artist_name = item.track.artist_names();
         let context_uri = item.context.as_ref().and_then(|c| c.uri.as_deref());
 
