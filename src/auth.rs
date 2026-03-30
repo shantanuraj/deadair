@@ -49,7 +49,8 @@ use base64::Engine;
 
 #[derive(Deserialize)]
 pub struct CallbackParams {
-    pub code: String,
+    pub code: Option<String>,
+    pub error: Option<String>,
     #[allow(dead_code)]
     pub state: Option<String>,
 }
@@ -58,13 +59,18 @@ pub async fn callback(
     State(state): State<Arc<AppState>>,
     Query(params): Query<CallbackParams>,
 ) -> Result<Response, crate::AppError> {
+    if let Some(error) = &params.error {
+        return Err(anyhow::anyhow!("spotify authorization failed: {}", error).into());
+    }
+    let code = params.code.as_deref()
+        .ok_or_else(|| anyhow::anyhow!("missing authorization code"))?;
     let redirect_uri = format!("{}/callback", state.config.host);
 
     let token = spotify::exchange_code(
         &state.http,
         &state.config.spotify_client_id,
         &state.config.spotify_client_secret,
-        &params.code,
+        code,
         &redirect_uri,
     )
     .await?;
@@ -103,7 +109,8 @@ pub async fn callback_manual(
         .ok_or_else(|| anyhow::anyhow!("no code in URL"))?;
 
     let fake_params = CallbackParams {
-        code,
+        code: Some(code),
+        error: None,
         state: None,
     };
 
