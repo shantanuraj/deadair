@@ -18,7 +18,7 @@ pub async fn login(
     State(state): State<Arc<AppState>>,
     Query(params): Query<LoginParams>,
 ) -> Response {
-    let redirect_uri = format!("{}/auth/callback", state.config.host);
+    let redirect_uri = format!("{}/callback", state.config.host);
     let csrf = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .encode(chrono::Utc::now().timestamp().to_le_bytes());
     let url = spotify::authorize_url(&state.config.spotify_client_id, &redirect_uri, &csrf);
@@ -33,7 +33,7 @@ input{{width:100%;padding:0.5em;font-family:inherit;margin:0.5em 0}}a{{color:#00
 <h1>deadair</h1>
 <p><a href="{url}">authorize with spotify</a></p>
 <p>after authorizing, paste the redirect URL below:</p>
-<form method="get" action="/auth/callback-manual">
+<form method="get" action="/callback-manual">
 <input type="text" name="url" placeholder="paste redirect URL here" autofocus>
 <button type="submit">submit</button>
 </form>
@@ -58,7 +58,7 @@ pub async fn callback(
     State(state): State<Arc<AppState>>,
     Query(params): Query<CallbackParams>,
 ) -> Result<Response, crate::AppError> {
-    let redirect_uri = format!("{}/auth/callback", state.config.host);
+    let redirect_uri = format!("{}/callback", state.config.host);
 
     let token = spotify::exchange_code(
         &state.http,
