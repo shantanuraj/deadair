@@ -41,9 +41,13 @@ impl Config {
         let host =
             env::var("DEADAIR_HOST").unwrap_or_else(|_| format!("http://localhost:{}", port));
         Ok(Self {
-            spotify_client_id: env::var("SPOTIFY_CLIENT_ID")?,
-            spotify_client_secret: env::var("SPOTIFY_CLIENT_SECRET")?,
-            deadair_secret: env::var("DEADAIR_SECRET")?.into_bytes(),
+            spotify_client_id: env::var("SPOTIFY_CLIENT_ID")
+                .map_err(|_| anyhow::anyhow!("SPOTIFY_CLIENT_ID not set"))?,
+            spotify_client_secret: env::var("SPOTIFY_CLIENT_SECRET")
+                .map_err(|_| anyhow::anyhow!("SPOTIFY_CLIENT_SECRET not set"))?,
+            deadair_secret: env::var("DEADAIR_SECRET")
+                .map_err(|_| anyhow::anyhow!("DEADAIR_SECRET not set"))?
+                .into_bytes(),
             db_path: env::var("DEADAIR_DB").unwrap_or_else(|_| "deadair.db".into()),
             port,
             reconcile: env::var("DEADAIR_RECONCILE")
