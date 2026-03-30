@@ -56,7 +56,7 @@ fn backfill(
 
         let started_at = played_at - (listened_ms / 1000);
 
-        if db::classification_exists_near(&conn, user_id, &item.track.id, started_at, 30)? {
+        if db::classification_exists_near(&conn, user_id, &item.track.id, played_at, 30)? {
             continue;
         }
 

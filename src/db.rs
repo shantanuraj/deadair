@@ -211,13 +211,13 @@ pub fn classification_exists_near(
     conn: &Connection,
     user_id: &str,
     track_id: &str,
-    around: i64,
+    ended_at: i64,
     tolerance: i64,
 ) -> Result<bool> {
     let count: i64 = conn.query_row(
         "SELECT COUNT(*) FROM classifications
-         WHERE user_id = ?1 AND track_id = ?2 AND ABS(started_at - ?3) <= ?4",
-        (user_id, track_id, around, tolerance),
+         WHERE user_id = ?1 AND track_id = ?2 AND ended_at IS NOT NULL AND ABS(ended_at - ?3) <= ?4",
+        (user_id, track_id, ended_at, tolerance),
         |row| row.get(0),
     )?;
     Ok(count > 0)
@@ -395,11 +395,12 @@ mod tests {
     fn classification_exists_near_check() {
         let conn = test_conn();
         upsert_user(&conn, "u1", "Test", "{}").unwrap();
-        open_classification(&conn, "u1", "t1", "Song", "Artist", "Album", 1000, 240_000, None).unwrap();
+        let id = open_classification(&conn, "u1", "t1", "Song", "Artist", "Album", 1000, 240_000, None).unwrap();
+        close_classification(&conn, id, 1240, 200_000, true).unwrap();
 
-        assert!(classification_exists_near(&conn, "u1", "t1", 1015, 30).unwrap());
+        assert!(classification_exists_near(&conn, "u1", "t1", 1250, 30).unwrap());
         assert!(!classification_exists_near(&conn, "u1", "t1", 2000, 30).unwrap());
-        assert!(!classification_exists_near(&conn, "u1", "t2", 1000, 30).unwrap());
+        assert!(!classification_exists_near(&conn, "u1", "t2", 1240, 30).unwrap());
     }
 
     #[test]
