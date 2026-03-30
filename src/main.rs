@@ -37,7 +37,7 @@ impl Config {
         let port = env::var("PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(8888u16);
+            .unwrap_or(8080u16);
         let host =
             env::var("DEADAIR_HOST").unwrap_or_else(|_| format!("http://localhost:{}", port));
         Ok(Self {
