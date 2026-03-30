@@ -1,7 +1,7 @@
 use anyhow::Result;
 use rusqlite::Connection;
 
-use crate::models::{ArtistSkipRate, Classification, Stats, TrackCount};
+use crate::models::{ArtistSkipRate, Classification, PlaybackEvent, Stats, TrackCount};
 
 pub fn create_tables(conn: &Connection) -> Result<()> {
     conn.execute_batch(
@@ -125,6 +125,42 @@ pub fn insert_event(
         ),
     )?;
     Ok(())
+}
+
+pub fn playback_events_in_range(
+    conn: &Connection,
+    user_id: &str,
+    from: i64,
+    to: i64,
+    limit: i64,
+) -> Result<Vec<PlaybackEvent>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, user_id, track_id, track_name, artist_name, album_name,
+                duration_ms, progress_ms, is_playing, shuffle, repeat_state,
+                context_uri, device_name, polled_at
+         FROM playback_events
+         WHERE user_id = ?1 AND polled_at >= ?2 AND polled_at <= ?3
+         ORDER BY polled_at DESC LIMIT ?4",
+    )?;
+    let rows = stmt.query_map((user_id, from, to, limit), |row| {
+        Ok(PlaybackEvent {
+            id: row.get(0)?,
+            user_id: row.get(1)?,
+            track_id: row.get(2)?,
+            track_name: row.get(3)?,
+            artist_name: row.get(4)?,
+            album_name: row.get(5)?,
+            duration_ms: row.get(6)?,
+            progress_ms: row.get(7)?,
+            is_playing: row.get(8)?,
+            shuffle: row.get(9)?,
+            repeat_state: row.get(10)?,
+            context_uri: row.get(11)?,
+            device_name: row.get(12)?,
+            polled_at: row.get(13)?,
+        })
+    })?;
+    Ok(rows.collect::<Result<Vec<_>, _>>()?)
 }
 
 #[allow(clippy::too_many_arguments)]

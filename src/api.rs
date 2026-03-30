@@ -14,6 +14,7 @@ pub struct EventsParams {
     pub since: Option<String>,
     pub until: Option<String>,
     pub last: Option<String>,
+    pub limit: Option<i64>,
 }
 
 fn resolve_window(params: &EventsParams) -> anyhow::Result<(i64, i64)> {
@@ -80,6 +81,43 @@ pub async fn events(
             .into_response())
     } else {
         Ok(Json(&classifications).into_response())
+    }
+}
+
+pub async fn playback(
+    session: Session,
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<EventsParams>,
+) -> AppResult<Response> {
+    let (from, to) = resolve_window(&params)?;
+    let limit = match params.limit {
+        Some(0) => -1,
+        Some(n) => n,
+        None => 1000,
+    };
+    let events = {
+        let conn = state.db.lock().unwrap();
+        db::playback_events_in_range(&conn, &session.user_id, from, to, limit)?
+    };
+
+    let format = params.format.as_deref().unwrap_or("json");
+
+    if format == "csv" {
+        let mut wtr = csv::Writer::from_writer(Vec::new());
+        for e in &events {
+            wtr.serialize(e)?;
+        }
+        let body = String::from_utf8(wtr.into_inner()?)?;
+        Ok((
+            [
+                (CONTENT_TYPE, "text/csv"),
+                (CONTENT_DISPOSITION, "attachment; filename=\"deadair-playback.csv\""),
+            ],
+            body,
+        )
+            .into_response())
+    } else {
+        Ok(Json(&events).into_response())
     }
 }
 

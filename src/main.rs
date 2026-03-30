@@ -111,6 +111,7 @@ async fn main() -> Result<()> {
         .route("/callback-manual", get(auth::callback_manual))
         .route("/auth/logout", get(auth::logout))
         .route("/api/events", get(api::events))
+        .route("/api/playback", get(api::playback))
         .route("/api/stats", get(api::stats))
         .with_state(state);
 

@@ -84,7 +84,7 @@ th{{border-bottom:1px solid #000}}h2{{font-weight:400;font-size:1em;margin-top:2
 <p>{total} listens &middot; {skipped} skipped ({skip_pct}%) &middot; {completed} played</p>
 {top_skipped_table}
 <hr>
-<p><a href="/api/events?format=csv">export csv</a> &middot; <a href="/api/events">export json</a> &middot; <a href="/api/stats">stats</a></p>
+<p><a href="/api/events?format=csv">events csv</a> &middot; <a href="/api/events">events json</a> &middot; <a href="/api/playback?format=csv">playback csv</a> &middot; <a href="/api/playback">playback json</a> &middot; <a href="/api/stats">stats</a></p>
 <hr>
 <p><a href="/auth/logout">logout</a></p>
 </body></html>"#,

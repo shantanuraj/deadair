@@ -94,6 +94,24 @@ pub struct UserProfile {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct PlaybackEvent {
+    pub id: i64,
+    pub user_id: String,
+    pub track_id: String,
+    pub track_name: String,
+    pub artist_name: String,
+    pub album_name: String,
+    pub duration_ms: i64,
+    pub progress_ms: i64,
+    pub is_playing: bool,
+    pub shuffle: bool,
+    pub repeat_state: String,
+    pub context_uri: Option<String>,
+    pub device_name: Option<String>,
+    pub polled_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct Classification {
     pub id: i64,
     pub user_id: String,
