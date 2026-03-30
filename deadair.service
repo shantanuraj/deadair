@@ -1,0 +1,14 @@
+[Unit]
+Description=deadair - spotify playback tracker
+After=network.target
+
+[Service]
+Type=simple
+User=shantanu
+WorkingDirectory=/home/shantanu/src/shantanuraj/deadair
+ExecStart=/home/shantanu/src/shantanuraj/deadair/target/release/deadair
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
