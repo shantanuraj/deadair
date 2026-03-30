@@ -87,6 +87,7 @@ pub type AppResult<T> = Result<T, AppError>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let _ = dotenvy::dotenv();
     let config = Config::from_env()?;
     let port = config.port;
 
